@@ -1,13 +1,15 @@
 if (__POLYFILL__) {
-  require(`core-js/modules/es6.promise`)
+  require(`core-js/fn/promise`)
 }
 import { apiRunner, apiRunnerAsync } from "./api-runner-browser"
 import React, { createElement } from "react"
 import ReactDOM from "react-dom"
 import { Router, Route, withRouter, matchPath } from "react-router-dom"
 import { ScrollContext } from "gatsby-react-router-scroll"
-import createHistory from "history/createBrowserHistory"
 import domReady from "domready"
+import { createLocation } from "history"
+import history from "./history"
+window.___history = history
 import emitter from "./emitter"
 window.___emitter = emitter
 import pages from "./pages.json"
@@ -20,8 +22,6 @@ loader.addProdRequires(asyncRequires)
 window.asyncRequires = asyncRequires
 window.___loader = loader
 window.matchPath = matchPath
-
-const history = createHistory()
 
 // Convert to a map for faster lookup in maybeRedirect()
 const redirectMap = redirects.reduce((map, redirect) => {
@@ -51,7 +51,9 @@ apiRunnerAsync(`onClientEntry`).then(() => {
     require(`./register-service-worker`)
   }
 
-  const navigateTo = pathname => {
+  const navigateTo = to => {
+    const location = createLocation(to, null, null, history.location)
+    let { pathname } = location
     const redirect = redirectMap[pathname]
 
     // If we're redirecting, just replace the passed in pathname
@@ -59,9 +61,14 @@ apiRunnerAsync(`onClientEntry`).then(() => {
     if (redirect) {
       pathname = redirect.toPath
     }
+    const wl = window.location
 
-    // If we're already at this path, do nothing.
-    if (window.location.pathname === pathname) {
+    // If we're already at this location, do nothing.
+    if (
+      wl.pathname === location.pathname &&
+      wl.search === location.search &&
+      wl.hash === location.hash
+    ) {
       return
     }
 
@@ -71,7 +78,7 @@ apiRunnerAsync(`onClientEntry`).then(() => {
       if (e.page.path === loader.getPage(pathname).path) {
         emitter.off(`onPostLoadPageResources`, eventHandler)
         clearTimeout(timeoutId)
-        window.___history.push(pathname)
+        window.___history.push(location)
       }
     }
 
@@ -80,13 +87,13 @@ apiRunnerAsync(`onClientEntry`).then(() => {
     const timeoutId = setTimeout(() => {
       emitter.off(`onPostLoadPageResources`, eventHandler)
       emitter.emit(`onDelayedLoadPageResources`, { pathname })
-      window.___history.push(pathname)
+      window.___history.push(location)
     }, 1000)
 
     if (loader.getResourcesForPathname(pathname)) {
       // The resources are already loaded so off we go.
       clearTimeout(timeoutId)
-      window.___history.push(pathname)
+      window.___history.push(location)
     } else {
       // They're not loaded yet so let's add a listener for when
       // they finish loading.
@@ -103,13 +110,18 @@ apiRunnerAsync(`onClientEntry`).then(() => {
     action: history.action,
   })
 
+  let initialAttachDone = false
   function attachToHistory(history) {
-    if (!window.___history) {
+    if (!window.___history || initialAttachDone === false) {
       window.___history = history
+      initialAttachDone = true
 
       history.listen((location, action) => {
         if (!maybeRedirect(location.pathname)) {
-          apiRunner(`onRouteUpdate`, { location, action })
+          // Make sure React has had a chance to flush to DOM first.
+          setTimeout(() => {
+            apiRunner(`onRouteUpdate`, { location, action })
+          }, 0)
         }
       })
     }
@@ -163,7 +175,8 @@ apiRunnerAsync(`onClientEntry`).then(() => {
                     })
                   } else {
                     return createElement(ComponentRenderer, {
-                      location: { page: true, pathname: `/404.html` },
+                      page: true,
+                      location: { pathname: `/404.html` },
                     })
                   }
                 },

@@ -9,10 +9,10 @@
 exports.onClientEntry = true
 
 /**
- * Called when the initial render of Gatsby App is done on the client.
+ * Called when the initial (but not subsequent) render of Gatsby App is done on the client.
  * @example
  * exports.onInitialClientRender = () => {
- *   console.log("ReactDOM.render is executed")
+ *   console.log("ReactDOM.render has executed")
  * }
  */
 exports.onInitialClientRender = true
@@ -39,11 +39,32 @@ exports.onRouteUpdate = true
 exports.shouldUpdateScroll = true
 
 /**
+ * Allow a plugin to register a Service Worker. Should be a function that returns true.
+ * @example
+ * exports.registerServiceWorker = () => true
+ */
+exports.registerServiceWorker = true
+
+/**
  * Allow a plugin to replace the router component e.g. to use a custom history version.
  * @param {object} $0
  * @param {object} $0.history The history instance to use in the replacement router instance
  */
 exports.replaceRouterComponent = true
+
+/**
+ * Allow a plugin to replace the page and layout component renderer. This api runner can be used to
+ * implement page transitions. See https://github.com/gatsbyjs/gatsby/tree/master/examples/using-page-transitions for an example of this.
+ * @param {object} $0
+ * @param {object} $0.props The props of the page or layout.
+ * @param {object} $0.loader The gatsby loader.
+ */
+exports.replaceComponentRenderer = true
+
+/**
+ * Allow a plugin to replace the history object.
+ */
+exports.replaceHistory = true
 
 /**
  * Allow a plugin to wrap the root component.

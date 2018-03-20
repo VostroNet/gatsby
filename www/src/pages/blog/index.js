@@ -1,10 +1,12 @@
 import React from "react"
+import Helmet from "react-helmet"
+
 import Container from "../../components/container"
 import BlogPostPreviewItem from "../../components/blog-post-preview-item"
 
-import presets from "../../utils/presets"
+import presets, { colors } from "../../utils/presets"
 import { rhythm, scale, options } from "../../utils/typography"
-import footerLogo from "../../gatsby-calm.svg"
+import logo from "../../monogram.svg"
 
 class BlogPostsIndex extends React.Component {
   render() {
@@ -14,15 +16,18 @@ class BlogPostsIndex extends React.Component {
       <div
         css={{
           [presets.Tablet]: {
-            background: presets.sidebar,
+            background: colors.ui.whisper,
             paddingBottom: rhythm(options.blockMarginBottom * 4),
           },
         }}
       >
+        <Helmet>
+          <title>Blog</title>
+        </Helmet>
         <Container
           css={{
             [presets.Tablet]: {
-              background: `url(${footerLogo})`,
+              background: `url(${logo})`,
               paddingBottom: `${rhythm(
                 options.blockMarginBottom * 4
               )} !important`,
@@ -65,12 +70,13 @@ class BlogPostsIndex extends React.Component {
                   paddingRight: rhythm(options.blockMarginBottom * 3),
                   marginLeft: rhythm(-options.blockMarginBottom * 2),
                   marginRight: rhythm(-options.blockMarginBottom * 2),
-                  transition: `transform ${presets.animation
-                    .speedDefault} ${presets.animation
-                    .curveDefault},  box-shadow ${presets.animation
-                    .speedDefault} ${presets.animation
-                    .curveDefault}, padding ${presets.animation
-                    .speedDefault} ${presets.animation.curveDefault}`,
+                  transition: `transform ${presets.animation.speedDefault} ${
+                    presets.animation.curveDefault
+                  },  box-shadow ${presets.animation.speedDefault} ${
+                    presets.animation.curveDefault
+                  }, padding ${presets.animation.speedDefault} ${
+                    presets.animation.curveDefault
+                  }`,
                   "&:hover": {
                     transform: `translateY(-4px)`,
                     boxShadow: `0 10px 42px rgba(25, 17, 34, 0.1)`,
@@ -100,7 +106,7 @@ export const pageQuery = graphql`
       sort: { order: DESC, fields: [frontmatter___date] }
       filter: {
         frontmatter: { draft: { ne: true } }
-        fileAbsolutePath: { regex: "/blog/" }
+        fileAbsolutePath: { regex: "/docs.blog/" }
       }
     ) {
       edges {

@@ -5,7 +5,10 @@ module.exports = {
   plugins: [
     {
       resolve: `gatsby-source-drupal`,
-      options: { baseUrl: `http://dev-gatsbyjs-d8.pantheonsite.io` },
+      options: {
+        baseUrl: `https://live-contentacms.pantheonsite.io/`,
+        apiBase: `api`,
+      },
     },
     {
       resolve: `gatsby-plugin-google-analytics`,
@@ -14,5 +17,8 @@ module.exports = {
       },
     },
     `gatsby-plugin-offline`,
+    `gatsby-plugin-glamor`,
+    `gatsby-plugin-sharp`,
+    `gatsby-transformer-sharp`,
   ],
 }

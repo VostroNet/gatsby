@@ -1,55 +1,8 @@
 import React from "react"
 import Link from "gatsby-link"
-import gray from "gray-percentage"
 
-import typography, { rhythm, scale, options } from "../utils/typography"
-import presets from "../utils/presets"
-
-const accentColor = presets.brand
-const listStyles = {
-  listStyle: `none`,
-  margin: 0,
-  padding: 0,
-  fontFamily: typography.options.headerFontFamily.join(`,`),
-  "& li": {
-    marginBottom: options.blockMarginBottom / 2,
-    lineHeight: 1.3,
-    paddingTop: rhythm(1 / 8),
-    paddingBottom: rhythm(1 / 8),
-    "& .nav-link": {
-      position: `relative`,
-      "&:before": {
-        content: ` `,
-        height: 4,
-        width: 4,
-        borderRadius: `100%`,
-        top: `.5em`,
-        left: `-.7em`,
-        fontWeight: `normal`,
-        position: `absolute`,
-        transform: `scale(0.1)`,
-        transition: `all ${presets.animation.speedDefault} ${presets.animation
-          .curveDefault}`,
-        [presets.Hd]: {
-          height: 6,
-          width: 6,
-          top: `.65em`,
-          marginTop: -3,
-          left: `-1em`,
-        },
-      },
-    },
-    "& .nav-link-active": {
-      opacity: 1,
-      color: accentColor,
-      fontWeight: `600`,
-      "&:before": {
-        background: accentColor,
-        transform: `scale(1)`,
-      },
-    },
-  },
-}
+import { rhythm, scale, options } from "../utils/typography"
+import presets, { colors } from "../utils/presets"
 
 const Section = props => (
   <div>
@@ -70,27 +23,21 @@ const Section = props => (
 )
 
 const SectionLinks = props => {
-  const tutorialStyles = props.isTutorial
-    ? {
-        "&&": {
-          "& > li": {
-            marginBottom: `1rem`,
-            "& > .nav-link": {
-              fontWeight: `bold`,
-            },
-          },
-        },
-      }
-    : false
+  const listStyles = {
+    listStyle: `none`,
+    margin: 0,
+    padding: 0,
+    fontFamily: options.headerFontFamily.join(`,`),
+  }
 
   return (
     <ul
       css={{
         ...listStyles,
+        // For nested <ul>s in the "Tutorial" section
         "& ul": {
           ...listStyles,
         },
-        ...tutorialStyles,
       }}
     >
       {props.items.map((item, index) => (
@@ -99,6 +46,7 @@ const SectionLinks = props => {
           children={item.items}
           key={index}
           isInline={props.isInline}
+          isTutorial={props.isTutorial}
         />
       ))}
     </ul>
@@ -116,7 +64,13 @@ const SectionLink = props => {
   let childnodes = null
   if (props.children) {
     childnodes = props.children.map((childnode, index) => (
-      <SectionLink key={index} node={childnode} children={childnode.items} />
+      <SectionLink
+        key={index}
+        node={childnode}
+        children={childnode.items}
+        isNested={true}
+        isTutorial={props.isTutorial}
+      />
     ))
   }
 
@@ -125,22 +79,82 @@ const SectionLink = props => {
   // If the last character is a * then the doc page is still in draft
   const isDraft = item.title.slice(-1) === `*`
   const title = isDraft ? item.title.slice(0, -1) : item.title
-  const linkStyle = {
-    "&&": {
-      "& .nav-link": {
-        borderBottom: `none`,
-        boxShadow: `none`,
-        color: isDraft ? gray(50, 270) : gray(30, 270),
+  const isTutorialFirstLevel = props.isTutorial && !props.isNested
+
+  const styles = {
+    listItem: {
+      marginBottom: isTutorialFirstLevel
+        ? rhythm(1)
+        : options.blockMarginBottom / 2,
+      lineHeight: 1.3,
+      paddingTop: rhythm(1 / 8),
+      paddingBottom: rhythm(1 / 8),
+    },
+    linkDefault: {
+      position: `relative`,
+      borderBottom: `none`,
+      boxShadow: `none`,
+      fontWeight: isTutorialFirstLevel ? `bold` : `normal`,
+      color: isDraft ? colors.gray.calm : colors.gray.text,
+      fontStyle: isDraft ? `italic` : false,
+      "&:before": {
+        content: ` `,
+        height: 4,
+        width: 4,
+        borderRadius: `100%`,
+        top: `.5em`,
+        left: `-.7em`,
         fontWeight: `normal`,
-        fontStyle: isDraft ? `italic` : false,
+        position: `absolute`,
+        transform: `scale(0.1)`,
+        transition: `all ${presets.animation.speedDefault} ${
+          presets.animation.curveDefault
+        }`,
+        [presets.Hd]: {
+          height: 6,
+          width: 6,
+          top: `.65em`,
+          marginTop: -3,
+          left: `-1em`,
+        },
       },
-      "& .nav-link-active": {
-        color: accentColor,
-        fontWeight: `bold`,
-        fontStyle: isDraft ? `italic` : false,
+    },
+    linkActive: {
+      opacity: 1,
+      color: colors.gatsby,
+      fontWeight: `bold`,
+      "&:before": {
+        background: colors.gatsby,
+        transform: `scale(1)`,
       },
     },
   }
+
+  const linkStyle = props.isNested
+    ? {
+        ...styles.listItem,
+        "& .nav-link": {
+          ...styles.linkDefault,
+          color: isDraft ? colors.gray.calm : colors.gray.text,
+        },
+        "& .nav-link-active": {
+          ...styles.linkActive,
+          color: isDraft ? colors.gray.calm : colors.gray.text,
+          fontWeight: `normal`,
+          "&:before": {
+            display: `none`,
+          },
+        },
+      }
+    : {
+        ...styles.listItem,
+        "& > .nav-link": {
+          ...styles.linkDefault,
+        },
+        "& > .nav-link-active": {
+          ...styles.linkActive,
+        },
+      }
 
   return (
     <li key={item.title} css={linkStyle}>
@@ -177,7 +191,7 @@ class SidebarBody extends React.Component {
         }
       : {
           fontSize: scale(-2 / 5).fontSize,
-          color: presets.brandLight,
+          color: colors.lilac,
           textTransform: `uppercase`,
           letterSpacing: `.15em`,
           fontWeight: `normal`,
@@ -188,6 +202,7 @@ class SidebarBody extends React.Component {
         css={{
           padding: isInline ? 0 : rhythm(3 / 4),
         }}
+        className="docSearch-sidebar"
       >
         {menu.map((section, index) => (
           <div

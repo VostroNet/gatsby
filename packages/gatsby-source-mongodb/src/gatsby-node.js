@@ -1,6 +1,6 @@
 const MongoClient = require(`mongodb`).MongoClient
 const crypto = require(`crypto`)
-const createMappingChildNodes = require(`./mapping`)
+const prepareMappingChildNode = require(`./mapping`)
 const _ = require(`lodash`)
 
 exports.sourceNodes = (
@@ -20,7 +20,9 @@ exports.sourceNodes = (
     authUrlPart = `${pluginOptions.auth.user}:${pluginOptions.auth.password}@`
 
   MongoClient.connect(
-    `mongodb://${authUrlPart}${serverOptions.address}:${serverOptions.port}/${dbName}`,
+    `mongodb://${authUrlPart}${serverOptions.address}:${
+      serverOptions.port
+    }/${dbName}`,
     function(err, db) {
       // Establish connection to db
       if (err) {
@@ -76,6 +78,7 @@ function createNodes(
             .digest(`hex`),
         },
       }
+      const childrenNodes = []
       if (pluginOptions.map) {
         let mapObj = pluginOptions.map
         if (pluginOptions.map[collectionName]) {
@@ -88,7 +91,7 @@ function createNodes(
             (typeof mapObj[mediaItemFieldKey] === `string` ||
               mapObj[mediaItemFieldKey] instanceof String)
           ) {
-            node[`${mediaItemFieldKey}___NODE`] = createMappingChildNodes(
+            const mappingChildNode = prepareMappingChildNode(
               node,
               mediaItemFieldKey,
               node[mediaItemFieldKey],
@@ -96,11 +99,17 @@ function createNodes(
               createNode
             )
 
+            node[`${mediaItemFieldKey}___NODE`] = mappingChildNode.id
+            childrenNodes.push(mappingChildNode)
+
             delete node[mediaItemFieldKey]
           }
         })
       }
       createNode(node)
+      childrenNodes.forEach(node => {
+        createNode(node)
+      })
     }
   })
 }

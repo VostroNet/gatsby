@@ -1,14 +1,16 @@
+require(`v8-compile-cache`)
+
 import { uniq, some } from "lodash"
 import fs from "fs"
 import path from "path"
 import webpack from "webpack"
 import dotenv from "dotenv"
 import Config from "webpack-configurator"
-import ExtractTextPlugin from "extract-text-webpack-plugin"
 import StaticSiteGeneratorPlugin from "static-site-generator-webpack-plugin"
 import { StatsWriterPlugin } from "webpack-stats-plugin"
 import FriendlyErrorsWebpackPlugin from "friendly-errors-webpack-plugin"
 import { cssModulesConfig } from "gatsby-1-config-css-modules"
+import { extractTextPlugin } from "gatsby-1-config-extract-plugin"
 
 // This isn't working right it seems.
 // import WebpackStableModuleIdAndHash from 'webpack-stable-module-id-and-hash'
@@ -37,13 +39,12 @@ module.exports = async (
   webpackPort = 1500,
   pages = []
 ) => {
-  const babelStage = suppliedStage
   const directoryPath = withBasePath(directory)
 
   // We combine develop & develop-html stages for purposes of generating the
   // webpack config.
   const stage = suppliedStage
-  const babelConfig = await genBabelConfig(program, babelStage)
+  const babelConfig = await genBabelConfig(program, suppliedStage)
 
   function processEnv(stage, defaultNodeEnv) {
     debug(`Building env for "${stage}"`)
@@ -85,7 +86,11 @@ module.exports = async (
         return {
           path: directory,
           filename: `[name].js`,
-          publicPath: `http://${program.host}:${webpackPort}/`,
+          publicPath: `${program.ssl ? `https` : `http`}://${
+            program.host
+          }:${webpackPort}/`,
+          devtoolModuleFilenameTemplate: info =>
+            path.resolve(info.absoluteResourcePath).replace(/\\/g, `/`),
         }
       case `build-css`:
         // Webpack will always generate a resultant javascript file.
@@ -129,9 +134,11 @@ module.exports = async (
         return {
           commons: [
             require.resolve(`react-hot-loader/patch`),
-            `${require.resolve(
-              `webpack-hot-middleware/client`
-            )}?path=http://${program.host}:${webpackPort}/__webpack_hmr&reload=true`,
+            `${require.resolve(`webpack-hot-middleware/client`)}?path=${
+              program.ssl ? `https` : `http`
+            }://${
+              program.host
+            }:${webpackPort}/__webpack_hmr&reload=true&overlay=false`,
             directoryPath(`.cache/app`),
           ],
         }
@@ -176,12 +183,12 @@ module.exports = async (
           new webpack.NamedModulesPlugin(),
           new FriendlyErrorsWebpackPlugin({
             clearConsole: false,
-            compilationSuccessInfo: {
-              messages: [
-                `Your site is running at http://localhost:${program.port}`,
-                `Your graphql debugger is running at http://localhost:${program.port}/___graphql`,
-              ],
-            },
+            // compilationSuccessInfo: {
+            // messages: [
+            // `You can now view your site in the browser running at http://${program.host}:${program.port}`,
+            // `Your graphql debugger is running at http://${program.host}:${program.port}/___graphql`,
+            // ],
+            // },
           }),
         ]
       case `develop-html`:
@@ -196,7 +203,7 @@ module.exports = async (
             __PATH_PREFIX__: JSON.stringify(store.getState().config.pathPrefix),
             __POLYFILL__: store.getState().config.polyfill,
           }),
-          new ExtractTextPlugin(`build-html-styles.css`),
+          extractTextPlugin(stage),
         ]
       case `build-css`:
         return [
@@ -206,7 +213,7 @@ module.exports = async (
             __PATH_PREFIX__: JSON.stringify(store.getState().config.pathPrefix),
             __POLYFILL__: store.getState().config.polyfill,
           }),
-          new ExtractTextPlugin(`styles.css`, { allChunks: true }),
+          extractTextPlugin(stage),
         ]
       case `build-html`:
         return [
@@ -220,7 +227,7 @@ module.exports = async (
             __PATH_PREFIX__: JSON.stringify(store.getState().config.pathPrefix),
             __POLYFILL__: store.getState().config.polyfill,
           }),
-          new ExtractTextPlugin(`build-html-styles.css`, { allChunks: true }),
+          extractTextPlugin(stage),
         ]
       case `build-javascript`: {
         // Get array of page template component names.
@@ -277,7 +284,10 @@ module.exports = async (
               ]
               const isFramework = some(
                 vendorModuleList.map(vendor => {
-                  const regex = new RegExp(`/node_modules/${vendor}/.*`, `i`)
+                  const regex = new RegExp(
+                    `[\\\\/]node_modules[\\\\/]${vendor}[\\\\/].*`,
+                    `i`
+                  )
                   return regex.test(module.resource)
                 })
               )
@@ -294,7 +304,7 @@ module.exports = async (
             __POLYFILL__: store.getState().config.polyfill,
           }),
           // Extract CSS so it doesn't get added to JS bundles.
-          new ExtractTextPlugin(`build-js-styles.css`, { allChunks: true }),
+          extractTextPlugin(stage),
           // Write out mapping between chunk names and their hashed names. We use
           // this to add the needed javascript files to each HTML page.
           new StatsWriterPlugin(),
@@ -431,13 +441,13 @@ module.exports = async (
         config.loader(`css`, {
           test: /\.css$/,
           exclude: /\.module\.css$/,
-          loader: ExtractTextPlugin.extract([`css?minimize`, `postcss`]),
+          loader: extractTextPlugin(stage).extract([`css?minimize`, `postcss`]),
         })
 
         // CSS modules
         config.loader(`cssModules`, {
           test: /\.module\.css$/,
-          loader: ExtractTextPlugin.extract(`style`, [
+          loader: extractTextPlugin(stage).extract(`style`, [
             cssModulesConfig(stage),
             `postcss`,
           ]),
@@ -467,7 +477,7 @@ module.exports = async (
         // CSS modules
         config.loader(`cssModules`, {
           test: /\.module\.css$/,
-          loader: ExtractTextPlugin.extract(`style`, [
+          loader: extractTextPlugin(stage).extract(`style`, [
             cssModulesConfig(stage),
             `postcss`,
           ]),
@@ -487,13 +497,13 @@ module.exports = async (
           test: /\.css$/,
           exclude: /\.module\.css$/,
           // loader: `null`,
-          loader: ExtractTextPlugin.extract([`css`]),
+          loader: extractTextPlugin(stage).extract([`css`]),
         })
 
         // CSS modules
         config.loader(`cssModules`, {
           test: /\.module\.css$/,
-          loader: ExtractTextPlugin.extract(`style`, [
+          loader: extractTextPlugin(stage).extract(`style`, [
             cssModulesConfig(stage),
             `postcss`,
           ]),
@@ -554,7 +564,12 @@ module.exports = async (
 
   // Use the suppliedStage again to let plugins distinguish between
   // server rendering the html.js and the frontend development config.
-  const validatedConfig = await webpackModifyValidate(config, suppliedStage)
+  const validatedConfig = await webpackModifyValidate(
+    program,
+    config,
+    babelConfig,
+    suppliedStage
+  )
 
   return validatedConfig
 }

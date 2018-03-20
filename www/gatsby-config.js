@@ -9,6 +9,12 @@ module.exports = {
   },
   plugins: [
     {
+      resolve: `gatsby-source-npm-package-search`,
+      options: {
+        keywords: [`gatsby-plugin`, `gatsby-component`],
+      },
+    },
+    {
       resolve: `gatsby-source-filesystem`,
       options: {
         name: `docs`,
@@ -79,8 +85,8 @@ module.exports = {
         name: `GatsbyJS`,
         short_name: `GatsbyJS`,
         start_url: `/`,
-        background_color: `#f7f0eb`,
-        theme_color: `#5c2965`,
+        background_color: `#ffffff`,
+        theme_color: `#663399`,
         display: `minimal-ui`,
         icons: [
           {
@@ -112,6 +118,12 @@ module.exports = {
         trackingId: `UA-93349937-1`,
       },
     },
+    {
+      resolve: `gatsby-plugin-fullstory`,
+      options: {
+        fs_org: `B2TRP`,
+      },
+    },
     `gatsby-plugin-sitemap`,
     {
       resolve: `gatsby-plugin-feed`,
@@ -124,7 +136,7 @@ module.exports = {
                   sort: { order: DESC, fields: [frontmatter___date] }
                   filter: {
                     frontmatter: { draft: { ne: true } }
-                    fileAbsolutePath: { regex: "/blog/" }
+                    fileAbsolutePath: { regex: "/docs.blog/" }
                   }
                 ) {
                   edges {

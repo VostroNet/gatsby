@@ -3,11 +3,11 @@ const Promise = require(`bluebird`)
 const _ = require(`lodash`)
 const { composeWithDevTools } = require(`remote-redux-devtools`)
 const fs = require(`fs`)
-const EventEmitter = require(`eventemitter2`)
+const mitt = require(`mitt`)
 const stringify = require(`json-stringify-safe`)
 
 // Create event emitter for actions
-const emitter = new EventEmitter()
+const emitter = mitt()
 
 // Reducers
 const reducers = require(`./reducers`)
@@ -34,12 +34,25 @@ if (process.env.REDUX_DEVTOOLS === `true`) {
   store = Redux.createStore(
     Redux.combineReducers({ ...reducers }),
     initialState,
-    composeEnhancers(Redux.applyMiddleware())
+    composeEnhancers(
+      Redux.applyMiddleware(function multi({ dispatch }) {
+        return next => action =>
+          Array.isArray(action)
+            ? action.filter(Boolean).map(dispatch)
+            : next(action)
+      })
+    )
   )
 } else {
   store = Redux.createStore(
     Redux.combineReducers({ ...reducers }),
-    initialState
+    initialState,
+    Redux.applyMiddleware(function multi({ dispatch }) {
+      return next => action =>
+        Array.isArray(action)
+          ? action.filter(Boolean).map(dispatch)
+          : next(action)
+    })
   )
 }
 
@@ -62,7 +75,7 @@ store.subscribe(() => {
   emitter.emit(lastAction.type, lastAction)
 })
 
-emitter.onAny(() => {
+emitter.on(`*`, () => {
   saveState(store.getState())
 })
 
@@ -84,7 +97,7 @@ exports.hasNodeChanged = (id, digest) => {
 }
 
 exports.loadNodeContent = node => {
-  if (node.internal.content) {
+  if (_.isString(node.internal.content)) {
     return Promise.resolve(node.internal.content)
   } else {
     return new Promise(resolve => {

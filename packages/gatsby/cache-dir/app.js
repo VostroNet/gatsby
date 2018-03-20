@@ -17,14 +17,14 @@ apiRunnerAsync(`onClientEntry`).then(() => {
   socketIo()
 
   /**
-     * Service Workers are persistent by nature. They stick around,
-     * serving a cached version of the site if they aren't removed.
-     * This is especially frustrating when you need to test the
-     * production build on your local machine.
-     *
-     * Let's unregister the service workers in development, and tidy up a few errors.
-     */
-  if (`serviceWorker` in navigator) {
+   * Service Workers are persistent by nature. They stick around,
+   * serving a cached version of the site if they aren't removed.
+   * This is especially frustrating when you need to test the
+   * production build on your local machine.
+   *
+   * Let's unregister the service workers in development, and tidy up a few errors.
+   */
+  if (supportsServiceWorkers(location, navigator)) {
     navigator.serviceWorker.getRegistrations().then(registrations => {
       for (let registration of registrations) {
         registration.unregister()
@@ -69,3 +69,10 @@ apiRunnerAsync(`onClientEntry`).then(() => {
     })
   }
 })
+
+function supportsServiceWorkers(location, navigator) {
+  if (location.hostname === `localhost` || location.protocol === `https:`) {
+    return `serviceWorker` in navigator
+  }
+  return false
+}

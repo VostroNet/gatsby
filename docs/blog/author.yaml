@@ -34,3 +34,70 @@
   bio: I enjoy helping make web systems whilst trying to empathise with users. Currently at https://indigotree.co.uk
   avatar: avatars/benjamin-read.jpg
   twitter: "@muzzlehatch_"
+- id: Tal Bereznitskey
+  bio: CTO @ Torii, a stealth mode startup
+  avatar: avatars/tal-bereznitskey.jpg
+  twitter: "@ketacode"
+- id: Kalin Chernev
+  bio: Full Stack Web Developer
+  avatar: avatars/kalin-chernev.jpg
+  twitter: "@kalinchernev"
+- id: Nahuel Scotti
+  bio: Developer - https://www.singuerinc.com
+  avatar: avatars/nahuel-scotti.jpeg
+  twitter: "@singuerinc"
+- id: Fernando Poumian
+  bio: Full Stack Web Developer - https://www.halfelectronic.com
+  avatar: avatars/fernando-poumian.jpeg
+  twitter: "@fernandopoumian"
+- id: Josh Weaver
+  bio: Developer at By the Book, Inc. Enjoys technology, writing and playing music. Can't turn down a decent board game.
+  avatar: avatars/josh-weaver.jpg
+  twitter: "@3cordguy"
+- id: Arden de Raaij
+  bio: Web Developer based in Lisbon, Portugal
+  avatar: avatars/arden-de-raaij.jpg
+  twitter: "@ardennl"
+- id: Shannon Soper
+  bio: Lives and works in Provo, UT doing UX research for GatsbyJS, music teaching / performance, and keeping up with her dog’s Instagram fans @dgtrwatson. Her background is in persuasive writing & speaking and she enjoys teaching college-level writing courses on the side.
+  avatar: avatars/shannon-soper.jpg
+  twitter: "@shannonb_ux"
+- id: Sam Bhagwat
+  bio: Bay Area adoptee. Programmer, econ nerd, startup enthusiast
+  avatar: avatars/sam-bhagwat.jpg
+  twitter: "@calcsam"
+- id: Pierre Burgy
+  bio: Co-creator of Strapi. Node.js and APIs lover. Coding when not windsurfing.
+  avatar: avatars/pierre-burgy.jpeg
+  twitter: "@pierre_burgy"
+- id: Amberley Romo
+  bio: Developer based in Austin, TX.
+  avatar: avatars/amberley-romo.jpg
+  twitter: "@amberleyjohanna"
+- id: Robin Vasan
+  bio: Robin Vasan is an experienced early-stage venture investor and former repeat entrepreneur. His expertise covers the full life-cycle of building and scaling companies and he primarily invests in applications, cloud computing, open source, virtualization and security.
+  avatar: avatars/robin-vasan.jpg
+- id: Ross Whitehouse
+  bio: React and Front-End Developer from Birmingham, UK
+  avatar: avatars/ross-whitehouse.jpg
+  twitter: "@RossWhitehouse"
+- id: Vlad Pasculescu
+  bio: Designer turned maker living and creating in Southern California
+  avatar: avatars/vlad-pasculescu.jpg
+  twitter: "@vladpasculescu"
+- id: Brandon Konkle
+  bio: Full-stack developer building a flexible consulting team powered by React
+  avatar: avatars/brandon-konkle.jpg
+  twitter: "@bkonkle"
+- id: Steven Natera
+  bio: Founder of Gatsby Manor. Site Reliability Engineer. Open source addict. Writer at Hackernoon.
+  avatar: avatars/steven-natera.jpg
+  twitter: "@stevennatera"
+- id: Ryan Wiemer
+  bio: Oakland based account manager that enjoys working on web and interactive projects - https://www.ryanwiemer.com
+  avatar: avatars/ryan-wiemer.jpg
+  twitter: "@ryanwiemer"
+- id: Jia Hao Goh
+  bio: Software engineer who loves open source and keeping up with awesome tech — https://jiahao.codes/
+  avatar: avatars/jia-hao-goh.jpg
+  twitter: "@jiahaog"

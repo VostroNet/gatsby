@@ -6,22 +6,51 @@ const fs = require(`fs-extra`)
 const slash = require(`slash`)
 const slugify = require(`limax`)
 
+const localPackages = `../packages`
+const localPackagesArr = []
+fs.readdirSync(localPackages).forEach(file => {
+  localPackagesArr.push(file)
+})
+// convert a string like `/some/long/path/name-of-docs/` to `name-of-docs`
+const slugToAnchor = slug =>
+  slug
+    .split(`/`) // split on dir separators
+    .filter(item => item !== ``) // remove empty values
+    .pop() // take last item
+
 exports.createPages = ({ graphql, boundActionCreators }) => {
-  const { createPage } = boundActionCreators
+  const { createPage, createRedirect } = boundActionCreators
+
+  // Random redirects
+  createRedirect({
+    fromPath: `/blog/2018-02-26-documentation-project/`, // Tweeted this link out then switched it
+    toPath: `/blog/2018-02-28-documentation-project/`,
+    isPermanent: true,
+  })
+
+  createRedirect({
+    fromPath: `/community/`, // Moved "Community" page from /community to /docs/community
+    toPath: `/docs/community/`,
+    isPermanent: true,
+  })
+
   return new Promise((resolve, reject) => {
     const docsTemplate = path.resolve(`src/templates/template-docs-markdown.js`)
     const blogPostTemplate = path.resolve(`src/templates/template-blog-post.js`)
     const contributorPageTemplate = path.resolve(
       `src/templates/template-contributor-page.js`
     )
-    const packageTemplate = path.resolve(
-      `src/templates/template-docs-packages.js`
+    const localPackageTemplate = path.resolve(
+      `src/templates/template-docs-local-packages.js`
+    )
+    const remotePackageTemplate = path.resolve(
+      `src/templates/template-docs-remote-packages.js`
     )
     // Query for markdown nodes to use in creating pages.
     resolve(
       graphql(
         `
-          {
+          query {
             allMarkdownRemark(
               sort: { order: DESC, fields: [frontmatter___date] }
               limit: 1000
@@ -46,6 +75,22 @@ exports.createPages = ({ graphql, boundActionCreators }) => {
                 node {
                   fields {
                     slug
+                  }
+                }
+              }
+            }
+            allNpmPackage {
+              edges {
+                node {
+                  id
+                  title
+                  slug
+                  readme {
+                    id
+                    childMarkdownRemark {
+                      id
+                      html
+                    }
                   }
                 }
               }
@@ -107,10 +152,34 @@ exports.createPages = ({ graphql, boundActionCreators }) => {
             createPage({
               path: `${edge.node.fields.slug}`, // required
               component: slash(
-                edge.node.fields.package ? packageTemplate : docsTemplate
+                edge.node.fields.package ? localPackageTemplate : docsTemplate
               ),
               context: {
                 slug: edge.node.fields.slug,
+              },
+            })
+          }
+        })
+
+        const allPackages = result.data.allNpmPackage.edges
+        // Create package readme
+        allPackages.forEach(edge => {
+          if (_.includes(localPackagesArr, edge.node.title)) {
+            createPage({
+              path: edge.node.slug,
+              component: slash(localPackageTemplate),
+              context: {
+                slug: edge.node.slug,
+                id: edge.node.id,
+              },
+            })
+          } else {
+            createPage({
+              path: edge.node.slug,
+              component: slash(remotePackageTemplate),
+              context: {
+                slug: edge.node.slug,
+                id: edge.node.id,
               },
             })
           }
@@ -170,6 +239,7 @@ exports.onCreateNode = ({ node, boundActionCreators, getNode }) => {
       createNodeField({ node, name: `package`, value: true })
     }
     if (slug) {
+      createNodeField({ node, name: `anchor`, value: slugToAnchor(slug) })
       createNodeField({ node, name: `slug`, value: slug })
     }
   } else if (node.internal.type === `AuthorYaml`) {

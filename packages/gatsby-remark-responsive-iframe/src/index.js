@@ -45,9 +45,7 @@ module.exports = ({ markdownAST }, pluginOptions = {}) =>
           $(`iframe, object`)
             .attr(`width`, null)
             .attr(`height`, null)
-          const newIframe = $(`body`)
-            .children()
-            .html() // fix for cheerio v1
+          const newIframe = $(`body`).html() // fix for cheerio v1
 
           // TODO add youtube preview image as background-image.
 
@@ -56,7 +54,9 @@ module.exports = ({ markdownAST }, pluginOptions = {}) =>
             class="gatsby-resp-iframe-wrapper"
             style="padding-bottom: ${height /
               width *
-              100}%; position: relative; height: 0; overflow: hidden;${options.wrapperStyle}"
+              100}%; position: relative; height: 0; overflow: hidden;${
+            options.wrapperStyle
+          }"
           >
             ${newIframe}
           </div>

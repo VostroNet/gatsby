@@ -3,11 +3,16 @@ import pify from "pify"
 
 export const writeFile = pify(fs.writeFile)
 
-export const runQuery = (handler, query) =>
+export const runQuery = (handler, query, excludes) =>
   handler(query).then(r => {
     if (r.errors) {
       throw new Error(r.errors.join(`, `))
     }
+
+    // Removing exluded paths
+    r.data.allSitePage.edges = r.data.allSitePage.edges.filter(
+      page => !excludes.includes(page.node.path)
+    )
 
     return r.data
   })
@@ -20,12 +25,8 @@ export const defaultOptions = {
           siteUrl
         }
       }
-      
-      allSitePage(
-        filter: {
-          path: {ne: "/dev-404-page/"}
-        }
-      ) {
+
+      allSitePage {
         edges {
           node {
             path
@@ -34,6 +35,7 @@ export const defaultOptions = {
       }
   }`,
   output: `/sitemap.xml`,
+  exclude: [`/dev-404-page`, `/404`, `/offline-plugin-app-shell-fallback`],
   serialize: ({ site, allSitePage }) =>
     allSitePage.edges.map(edge => {
       return {

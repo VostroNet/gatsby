@@ -23,7 +23,7 @@ Object {
       },
       "type": "html",
       "value": "<div class=\\"gatsby-highlight\\">
-      <pre class=\\"custom-js\\"><code><span class=\\"token comment\\" spellcheck=\\"true\\">// Fake</span>
+      <pre class=\\"custom-js\\"><code class=\\"custom-js\\"><span class=\\"token comment\\">// Fake</span>
 </code></pre>
       </div>",
     },
@@ -67,7 +67,7 @@ Object {
       },
       "type": "html",
       "value": "<div class=\\"gatsby-highlight\\">
-      <pre class=\\"language-js\\"><code><span class=\\"token comment\\" spellcheck=\\"true\\">// Fake</span>
+      <pre class=\\"language-js\\"><code class=\\"language-js\\"><span class=\\"token comment\\">// Fake</span>
 </code></pre>
       </div>",
     },
@@ -77,6 +77,172 @@ Object {
       "column": 4,
       "line": 3,
       "offset": 17,
+    },
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "type": "root",
+}
+`;
+
+exports[`remark prism plugin generates inline <code> tag with a custom class prefix if configured 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "position": Position {
+            "end": Object {
+              "column": 10,
+              "line": 1,
+              "offset": 9,
+            },
+            "indent": Array [],
+            "start": Object {
+              "column": 1,
+              "line": 1,
+              "offset": 0,
+            },
+          },
+          "type": "html",
+          "value": "<code class=\\"custom-text\\">foo bar</code>",
+        },
+      ],
+      "position": Position {
+        "end": Object {
+          "column": 10,
+          "line": 1,
+          "offset": 9,
+        },
+        "indent": Array [],
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "type": "paragraph",
+    },
+  ],
+  "position": Object {
+    "end": Object {
+      "column": 10,
+      "line": 1,
+      "offset": 9,
+    },
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "type": "root",
+}
+`;
+
+exports[`remark prism plugin generates inline <code> tag with class="language-*" prefix by default 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "position": Position {
+            "end": Object {
+              "column": 10,
+              "line": 1,
+              "offset": 9,
+            },
+            "indent": Array [],
+            "start": Object {
+              "column": 1,
+              "line": 1,
+              "offset": 0,
+            },
+          },
+          "type": "html",
+          "value": "<code class=\\"language-text\\">foo bar</code>",
+        },
+      ],
+      "position": Position {
+        "end": Object {
+          "column": 10,
+          "line": 1,
+          "offset": 9,
+        },
+        "indent": Array [],
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "type": "paragraph",
+    },
+  ],
+  "position": Object {
+    "end": Object {
+      "column": 10,
+      "line": 1,
+      "offset": 9,
+    },
+    "start": Object {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "type": "root",
+}
+`;
+
+exports[`remark prism plugin inlineCode handles language specifiers 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "position": Position {
+            "end": Object {
+              "column": 29,
+              "line": 1,
+              "offset": 28,
+            },
+            "indent": Array [],
+            "start": Object {
+              "column": 1,
+              "line": 1,
+              "offset": 0,
+            },
+          },
+          "type": "html",
+          "value": "<code class=\\"language-css\\"><span class=\\"token selector\\">.foo</span> <span class=\\"token punctuation\\">{</span> <span class=\\"token property\\">color</span><span class=\\"token punctuation\\">:</span> red <span class=\\"token punctuation\\">}</span>
+</code>",
+        },
+      ],
+      "position": Position {
+        "end": Object {
+          "column": 29,
+          "line": 1,
+          "offset": 28,
+        },
+        "indent": Array [],
+        "start": Object {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "type": "paragraph",
+    },
+  ],
+  "position": Object {
+    "end": Object {
+      "column": 29,
+      "line": 1,
+      "offset": 28,
     },
     "start": Object {
       "column": 1,

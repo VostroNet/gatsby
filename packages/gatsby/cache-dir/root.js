@@ -1,13 +1,46 @@
 import React, { createElement } from "react"
 import { Router, Route, matchPath, withRouter } from "react-router-dom"
 import { ScrollContext } from "gatsby-react-router-scroll"
-import history from "./dev-history"
+import history from "./history"
 import { apiRunner } from "./api-runner-browser"
 import syncRequires from "./sync-requires"
 import pages from "./pages.json"
 import redirects from "./redirects.json"
 import ComponentRenderer from "./component-renderer"
 import loader from "./loader"
+
+import * as ErrorOverlay from "react-error-overlay"
+
+// Report runtime errors
+ErrorOverlay.startReportingRuntimeErrors({
+  onError: () => {},
+  filename: `/commons.js`,
+})
+ErrorOverlay.setEditorHandler(errorLocation =>
+  window.fetch(
+    `/__open-stack-frame-in-editor?fileName=` +
+      window.encodeURIComponent(errorLocation.fileName) +
+      `&lineNumber=` +
+      window.encodeURIComponent(errorLocation.lineNumber || 1)
+  )
+)
+
+if (window.__webpack_hot_middleware_reporter__ !== undefined) {
+  // Report build errors
+  window.__webpack_hot_middleware_reporter__.useCustomOverlay({
+    showProblems(type, obj) {
+      if (type !== `errors`) {
+        ErrorOverlay.dismissBuildError()
+        return
+      }
+      ErrorOverlay.reportBuildError(obj[0])
+    },
+    clear() {
+      ErrorOverlay.dismissBuildError()
+    },
+  })
+}
+
 loader.addPagesArray(pages)
 loader.addDevRequires(syncRequires)
 window.___loader = loader
@@ -78,7 +111,7 @@ function shouldUpdateScroll(prevRouterProps, { location: { pathname } }) {
 
 let noMatch
 for (let i = 0; i < pages.length; i++) {
-  if (pages[i].path === `/dev-404-page/`) {
+  if (/^\/dev-404-page/.test(pages[i].path)) {
     noMatch = pages[i]
     break
   }
@@ -99,8 +132,8 @@ const addNotFoundRoute = () => {
   }
 }
 
-const navigateTo = pathname => {
-  window.___history.push(pathname)
+const navigateTo = to => {
+  window.___history.push(to)
 }
 
 window.___navigateTo = navigateTo
@@ -141,7 +174,9 @@ const Root = () =>
                   pageResources,
                 })
               } else {
-                const dev404Page = pages.find(p => p.path === `/dev-404-page/`)
+                const dev404Page = pages.find(p =>
+                  /^\/dev-404-page/.test(p.path)
+                )
                 return createElement(Route, {
                   key: `404-page`,
                   component: props =>

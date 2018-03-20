@@ -15,15 +15,71 @@ describe(`gatsby-plugin-typescript`, () => {
   })
 
   it(`modifies webpack config`, () => {
+    const babelConfig = { plugins: [``] }
     const config = {
       loader: jest.fn(),
     }
 
-    modifyWebpackConfig({ config }, { compilerOptions: {} })
+    modifyWebpackConfig({ config, babelConfig }, { compilerOptions: {} })
 
     expect(config.loader).toHaveBeenCalledTimes(1)
     const lastCall = config.loader.mock.calls.pop()
     expect(lastCall).toMatchSnapshot()
+  })
+
+  it(`passes the configuration to the ts-loader plugin`, () => {
+    const babelConfig = { plugins: [``] }
+    const config = {
+      loader: jest.fn(),
+    }
+    const options = { compilerOptions: { foo: `bar` }, transpileOnly: false }
+
+    modifyWebpackConfig({ config, babelConfig }, options)
+
+    const expectedOptions = {
+      compilerOptions: {
+        target: `esnext`,
+        experimentalDecorators: true,
+        jsx: `react`,
+        foo: `bar`,
+        module: `commonjs`,
+      },
+      transpileOnly: false,
+    }
+
+    expect(config.loader).toHaveBeenCalledWith(`typescript`, {
+      test: /\.tsx?$/,
+      loaders: [
+        `babel?${JSON.stringify({ plugins: [``] })}`,
+        `ts-loader?${JSON.stringify(expectedOptions)}`,
+      ],
+    })
+  })
+
+  it(`uses default configuration for the ts-loader plugin when no config is provided`, () => {
+    const babelConfig = { plugins: [``] }
+    const config = {
+      loader: jest.fn(),
+    }
+    modifyWebpackConfig({ config, babelConfig }, { compilerOptions: {} })
+
+    const expectedOptions = {
+      compilerOptions: {
+        target: `esnext`,
+        experimentalDecorators: true,
+        jsx: `react`,
+        module: `commonjs`,
+      },
+      transpileOnly: true,
+    }
+
+    expect(config.loader).toHaveBeenCalledWith(`typescript`, {
+      test: /\.tsx?$/,
+      loaders: [
+        `babel?${JSON.stringify({ plugins: [``] })}`,
+        `ts-loader?${JSON.stringify(expectedOptions)}`,
+      ],
+    })
   })
 
   describe(`pre-processing`, () => {

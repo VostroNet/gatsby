@@ -1,7 +1,6 @@
 const crypto = require(`crypto`)
 const deepMapKeys = require(`deep-map-keys`)
 const _ = require(`lodash`)
-const uuidv5 = require(`uuid/v5`)
 const { createRemoteFileNode } = require(`gatsby-source-filesystem`)
 
 const colorized = require(`./output-color`)
@@ -60,7 +59,7 @@ exports.getValidKey = getValidKey
 // Remove the ACF key from the response when it's not an object
 const normalizeACF = entities =>
   entities.map(e => {
-    if (!_.isObject(e[`acf`])) {
+    if (!_.isPlainObject(e[`acf`])) {
       delete e[`acf`]
     }
     return e
@@ -141,19 +140,9 @@ exports.liftRenderedField = entities =>
 exports.excludeUnknownEntities = entities =>
   entities.filter(e => e.wordpress_id) // Excluding entities without ID
 
-const seedConstant = `b2012db8-fafc-5a03-915f-e6016ff32086`
-const typeNamespaces = {}
-exports.createGatsbyIds = entities =>
+exports.createGatsbyIds = (createNodeId, entities) =>
   entities.map(e => {
-    let namespace
-    if (typeNamespaces[e.__type]) {
-      namespace = typeNamespaces[e.__type]
-    } else {
-      typeNamespaces[e.__type] = uuidv5(e.__type, seedConstant)
-      namespace = typeNamespaces[e.__type]
-    }
-
-    e.id = uuidv5(e.wordpress_id.toString(), namespace)
+    e.id = createNodeId(`${e.__type}-${e.wordpress_id.toString()}`)
     return e
   })
 
@@ -234,25 +223,61 @@ exports.mapTagsCategoriesToTaxonomies = entities =>
     return e
   })
 
+exports.searchReplaceContentUrls = function({
+  entities,
+  searchAndReplaceContentUrls,
+}) {
+  if (
+    !_.isPlainObject(searchAndReplaceContentUrls) ||
+    !_.has(searchAndReplaceContentUrls, `sourceUrl`) ||
+    !_.has(searchAndReplaceContentUrls, `replacementUrl`) ||
+    typeof searchAndReplaceContentUrls.sourceUrl !== `string` ||
+    typeof searchAndReplaceContentUrls.replacementUrl !== `string`
+  ) {
+    return entities
+  }
+
+  const { sourceUrl, replacementUrl } = searchAndReplaceContentUrls
+
+  const _blacklist = [`_links`, `__type`]
+
+  const blacklistProperties = function(obj = {}, blacklist = []) {
+    for (var i = 0; i < blacklist.length; i++) {
+      delete obj[blacklist[i]]
+    }
+
+    return obj
+  }
+
+  return entities.map(function(entity) {
+    const original = Object.assign({}, entity)
+
+    try {
+      var whiteList = blacklistProperties(entity, _blacklist)
+      var replaceable = JSON.stringify(whiteList)
+      var replaced = replaceable.replace(
+        new RegExp(sourceUrl, `g`),
+        replacementUrl
+      )
+      var parsed = JSON.parse(replaced)
+    } catch (e) {
+      console.log(colorized.out(e.message, colorized.color.Font.FgRed))
+      return original
+    }
+
+    return _.defaultsDeep(parsed, original)
+  })
+}
+
 exports.mapEntitiesToMedia = entities => {
   const media = entities.filter(e => e.__type === `wordpress__wp_media`)
 
   return entities.map(e => {
     // Map featured_media to its media node
-    let featuredMedia
-    if (e.featured_media) {
-      featuredMedia = media.find(m => m.wordpress_id === e.featured_media)
-    }
 
-    if (featuredMedia) {
-      e.featured_media___NODE = featuredMedia.id
-    }
-
-    // Always delete even if we can't find a featuredMedia as WordPress' API sets
-    // featured_media to 0 when there isn't one which is useless to us.
-    delete e.featured_media
-
-    const isPhoto = field =>
+    // Check if it's value of ACF Image field, that has 'Return value' set to
+    // 'Image Object' ( https://www.advancedcustomfields.com/resources/image/ )
+    const isPhotoObject = field =>
       _.isObject(field) &&
       field.wordpress_id &&
       field.url &&
@@ -262,65 +287,105 @@ exports.mapEntitiesToMedia = entities => {
         : false
 
     const photoRegex = /\.(gif|jpg|jpeg|tiff|png)$/i
-    const isPhotoUrl = filename => photoRegex.test(filename)
-    const replacePhoto = field =>
-      media.find(m => m.wordpress_id === field.wordpress_id).id
+    const isPhotoUrl = filename =>
+      _.isString(filename) && photoRegex.test(filename)
+    const isPhotoUrlAlreadyProcessed = key => key == `source_url`
+    const isFeaturedMedia = (value, key) =>
+      (_.isNumber(value) || _.isBoolean(value)) && key === `featured_media`
+    // ACF Gallery and similarly shaped arrays
+    const isArrayOfPhotoObject = field =>
+      _.isArray(field) && field.length > 0 && isPhotoObject(field[0])
+    const getMediaItemID = mediaItem => (mediaItem ? mediaItem.id : null)
+
+    // Try to get media node from value:
+    //  - special case - check if key is featured_media and value is photo ID
+    //  - check if value is photo url
+    //  - check if value is ACF Image Object
+    //  - check if value is ACF Gallery
+    const getMediaFromValue = (value, key) => {
+      if (isFeaturedMedia(value, key)) {
+        return {
+          mediaNodeID: _.isNumber(value)
+            ? getMediaItemID(media.find(m => m.wordpress_id === value))
+            : null,
+          deleteField: true,
+        }
+      } else if (isPhotoUrl(value) && !isPhotoUrlAlreadyProcessed(key)) {
+        const mediaNodeID = getMediaItemID(
+          media.find(m => m.source_url === value)
+        )
+        return {
+          mediaNodeID,
+          deleteField: !!mediaNodeID,
+        }
+      } else if (isPhotoObject(value)) {
+        const mediaNodeID = getMediaItemID(
+          media.find(m => m.source_url === value.url)
+        )
+        return {
+          mediaNodeID,
+          deleteField: !!mediaNodeID,
+        }
+      } else if (isArrayOfPhotoObject(value)) {
+        return {
+          mediaNodeID: value
+            .map(item => getMediaFromValue(item, key).mediaNodeID)
+            .filter(id => id !== null),
+          deleteField: true,
+        }
+      }
+      return {
+        mediaNodeID: null,
+        deleteField: false,
+      }
+    }
 
     const replaceFieldsInObject = object => {
+      let deletedAllFields = true
       _.each(object, (value, key) => {
+        const { mediaNodeID, deleteField } = getMediaFromValue(value, key)
+        if (mediaNodeID) {
+          object[`${key}___NODE`] = mediaNodeID
+        }
+        if (deleteField) {
+          delete object[key]
+          // We found photo node (even if it has no image),
+          // We can end processing this path
+          return
+        } else {
+          deletedAllFields = false
+        }
+
         if (_.isArray(value)) {
           value.forEach(v => replaceFieldsInObject(v))
-        }
-        if (isPhoto(value)) {
-          object[`${key}___NODE`] = replacePhoto(value)
-          delete object[key]
-        }
-
-        // featured_media can be nested inside ACF fields
-        if (_.isObject(value) && value.featured_media) {
-          featuredMedia = media.find(
-            m => m.wordpress_id === value.featured_media
-          )
-          if (featuredMedia) {
-            value.featured_media___NODE = featuredMedia.id
-          }
-          delete value.featured_media
-        }
-        if (_.isNumber(value) && key == `featured_media`) {
-          featuredMedia = media.find(m => m.wordpress_id === value)
-          if (featuredMedia) {
-            object[`${key}___NODE`] = featuredMedia.id
-          }
-          delete object[key]
-        }
-        if (_.isBoolean(value) && key == `featured_media`) {
-          delete object[key]
+        } else if (_.isObject(value)) {
+          replaceFieldsInObject(value)
         }
       })
-    }
 
-    if (e.acf) {
-      _.each(e.acf, (value, key) => {
-        if (_.isString(value) && isPhotoUrl(value)) {
-          const me = media.find(m => m.source_url === value)
-          e.acf[`${key}___NODE`] = me.id
-          delete e.acf[key]
-        }
-
-        if (_.isArray(value) && value[0] && value[0].acf_fc_layout) {
-          e.acf[key] = e.acf[key].map(f => {
-            replaceFieldsInObject(f)
-            return f
-          })
-        }
-      })
+      // Deleting fields and replacing them with links to different nodes
+      // can cause build errors if object will have only linked properites:
+      // https://github.com/gatsbyjs/gatsby/blob/master/packages/gatsby/src/schema/infer-graphql-input-fields.js#L205
+      // Hacky workaround:
+      // Adding dummy field with concrete value (not link) fixes build
+      if (deletedAllFields && object && _.isObject(object)) {
+        object[`dummy`] = true
+      }
     }
+    replaceFieldsInObject(e)
+
     return e
   })
 }
 
 // Downloads media files and removes "sizes" data as useless in Gatsby context.
-exports.downloadMediaFiles = async ({ entities, store, cache, createNode }) =>
+exports.downloadMediaFiles = async ({
+  entities,
+  store,
+  cache,
+  createNode,
+  _auth,
+}) =>
   Promise.all(
     entities.map(async e => {
       let fileNode
@@ -331,6 +396,7 @@ exports.downloadMediaFiles = async ({ entities, store, cache, createNode }) =>
             store,
             cache,
             createNode,
+            auth: _auth,
           })
         } catch (e) {
           // Ignore
@@ -346,26 +412,26 @@ exports.downloadMediaFiles = async ({ entities, store, cache, createNode }) =>
     })
   )
 
-const createACFChildNodes = (
+const prepareACFChildNodes = (
   obj,
   entityId,
   topLevelIndex,
   type,
   children,
-  createNode
+  childrenNodes
 ) => {
   // Replace any child arrays with pointers to nodes
   _.each(obj, (value, key) => {
-    if (_.isArray(value) && value[0].acf_fc_layout) {
+    if (_.isArray(value) && value[0] && value[0].acf_fc_layout) {
       obj[`${key}___NODE`] = value.map(
         v =>
-          createACFChildNodes(
+          prepareACFChildNodes(
             v,
             entityId,
             topLevelIndex,
             type + key,
             children,
-            createNode
+            childrenNodes
           ).id
       )
       delete obj[key]
@@ -379,8 +445,13 @@ const createACFChildNodes = (
     children: [],
     internal: { type, contentDigest: digest(JSON.stringify(obj)) },
   }
-  createNode(acfChildNode)
+
   children.push(acfChildNode.id)
+
+  // We recursively handle children nodes first, so we need
+  // to make sure parent nodes will be before their children.
+  // So let's use unshift to put nodes in the beginning.
+  childrenNodes.unshift(acfChildNode)
 
   return acfChildNode
 }
@@ -390,26 +461,27 @@ exports.createNodesFromEntities = ({ entities, createNode }) => {
     // Create subnodes for ACF Flexible layouts
     let { __type, ...entity } = e // eslint-disable-line no-unused-vars
     let children = []
+    let childrenNodes = []
     if (entity.acf) {
       _.each(entity.acf, (value, key) => {
-        if (_.isArray(value) && value[0].acf_fc_layout) {
-          entity.acf[`${key}_${entity.type}___NODE`] = entity.acf[
-            key
-          ].map((f, i) => {
-            const type = `WordPressAcf_${f.acf_fc_layout}`
-            delete f.acf_fc_layout
+        if (_.isArray(value) && value[0] && value[0].acf_fc_layout) {
+          entity.acf[`${key}_${entity.type}___NODE`] = entity.acf[key].map(
+            (f, i) => {
+              const type = `WordPressAcf_${f.acf_fc_layout}`
+              delete f.acf_fc_layout
 
-            const acfChildNode = createACFChildNodes(
-              f,
-              entity.id + i,
-              key,
-              type,
-              children,
-              createNode
-            )
+              const acfChildNode = prepareACFChildNodes(
+                f,
+                entity.id + i,
+                key,
+                type,
+                children,
+                childrenNodes
+              )
 
-            return acfChildNode.id
-          })
+              return acfChildNode.id
+            }
+          )
 
           delete entity.acf[key]
         }
@@ -426,5 +498,8 @@ exports.createNodesFromEntities = ({ entities, createNode }) => {
       },
     }
     createNode(node)
+    childrenNodes.forEach(node => {
+      createNode(node)
+    })
   })
 }
